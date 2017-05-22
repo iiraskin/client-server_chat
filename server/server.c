@@ -196,7 +196,7 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     int i = 0;
     
     for (i; i < usersLen; ++i ) {
-        if (sockid == Users[i].sockid) {
+        if (sockid == Users[i].sockid && Users[i].isOnline == 1) {
             char* newMes;
             newMes = malloc(messBufMaxSize);
             MMesMake(newMes, "You already logined");
@@ -204,6 +204,7 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
             free(newMes);
             free(newLogin);
             free(newPassword);
+            return;
         }
         if (strcmp(newLogin, Users[i].login) == 0) {
             if (strcmp(newPassword, Users[i].password) == 0) {
