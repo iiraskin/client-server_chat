@@ -185,6 +185,7 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
         free(newMes);
         return;
     }
+    
     char* newLogin = malloc(maxSizeOfLogin);
     newLogin[0] = 0;
     newLogin = strcat(newLogin, parsMes->strings[0]);
@@ -192,16 +193,17 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     newPassword[0] = 0;
     newPassword = strcat(newPassword, parsMes->strings[1]);
     int i = 0;
+    
     for (i; i < usersLen; ++i ) {
-       if (sockid = Users[i].sockid) {
-           char* newMes;
-           newMes = malloc(messBufMaxSize);
-           MMesMake(newMes, "You already logined");
-           send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
-           free(newMes);
-           free(newLogin);
-           free(newPassword);
-       }
+        if (sockid == Users[i].sockid) {
+            char* newMes;
+            newMes = malloc(messBufMaxSize);
+            MMesMake(newMes, "You already logined");
+            send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
+            free(newMes);
+            free(newLogin);
+            free(newPassword);
+        }
         if (strcmp(newLogin, Users[i].login) == 0) {
             if (strcmp(newPassword, Users[i].password) == 0) {
                 char* newMes;
@@ -433,7 +435,7 @@ void* userProcess(void * data) {
         }
         struct Message parsMes;
         Pars(messBuf, &parsMes);
-        if (parsMes.type == 'i') {
+        if (parsMes.type == 'i') {;
             IMess(sockid, &parsMes, mut);
         } else {
             int a;
@@ -528,7 +530,7 @@ int main(int argc, char* argv[])
     Users[0].login = alloca(maxSizeOfLogin);
     Users[0].login = "ilya";
     Users[0].isOnline = 0;
-    printf("Input Password\n");
+    printf("Input password\n");
     size_t len = 0;
     int r;
     Users[0].password = alloca(maxSizeOfPassword);
@@ -560,4 +562,3 @@ int main(int argc, char* argv[])
     
     return 0;
 }
-
