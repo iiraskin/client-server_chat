@@ -71,7 +71,7 @@ void Pars(char* mes, struct Message* parsMes) {
             i++;
         }
         j = 0;
-        parsMes->strings[k] = malloc(parsMes->stringLength[k]);
+        parsMes->strings[k] = malloc(parsMes->stringLength[k] + 1);
         parsMes->strings[k][0] = 0;
         strncat(parsMes->strings[k], mes + i, parsMes->stringLength[k]);
         i += parsMes->stringLength[k];
@@ -113,7 +113,7 @@ void MMesMake(char* newMes, char* text)
     notif.k = 2;
     struct timeval tv;
     gettimeofday(&tv, NULL);    
-    notif.strings[0] = malloc(16);
+    notif.strings[0] = malloc(18);
     sprintf(notif.strings[0],"%ld$%ld", (size_t)tv.tv_sec, (size_t)tv.tv_usec);
     notif.strings[1] = text;
     notif.stringLength[0] = strlen(notif.strings[0]);
@@ -131,7 +131,7 @@ void RMesMake(char* newMes, int sockid, char* text)
     notif.k = 3;
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    notif.strings[0] = malloc(16);
+    notif.strings[0] = malloc(18);
     sprintf(notif.strings[0],"%ld$%ld", (size_t)tv.tv_sec, (size_t)tv.tv_usec);
     int i = 0;
     for (i; i < usersLen; i++) {
@@ -305,6 +305,7 @@ void RMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
         newMes = malloc(messBufMaxSize);
         MMesMake(newMes, "Invalid message");
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
+        free(newMes);
         return;
     }
     char* newMes;
@@ -332,6 +333,7 @@ void HMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
         newMes = malloc(messBufMaxSize);
         MMesMake(newMes, "Invalid message");
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
+        free(newMes);
         return;
     }
     int i = atoi(parsMes->strings[0]) % bufSize;
@@ -375,6 +377,7 @@ void KMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
         newMes = malloc(messBufMaxSize);
         MMesMake(newMes, "Invalid message");
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
+        free(newMes);
         return;
     }
     if (Users[0].sockid != sockid) {
@@ -382,6 +385,7 @@ void KMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
         newMes = malloc(messBufMaxSize);
         MMesMake(newMes, "Access error");
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
+        free(newMes);
         return;
     }
     int i = 0;
@@ -420,7 +424,6 @@ void* userProcess(void * data) {
     struct UserProcDate newUserProcDate = *((struct UserProcDate*)data);
     int sockid = newUserProcDate.sockid;
     pthread_mutex_t* mut = newUserProcDate.mut;
-    char* newMes;
 
     while (1) {
         char messBuf[messBufMaxSize];
@@ -439,7 +442,7 @@ void* userProcess(void * data) {
         if (parsMes.type == 'i') {;
             IMess(sockid, &parsMes, mut);
         } else {
-            int a;
+            int a = 0;
             for (a; a < usersLen; a++) {
                 if (Users[a].sockid == sockid && Users[a].isOnline == 1) {
                     a = -1;
@@ -447,7 +450,7 @@ void* userProcess(void * data) {
                 }
             }
             if (a != -1) {
-                char* newMes;
+                char* newMes = NULL;
                 newMes = malloc(messBufMaxSize);
                 MMesMake(newMes, "Login, please");
                 send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
@@ -476,6 +479,10 @@ void* userProcess(void * data) {
                 default:
                         break;
             }
+        }
+        int a = 0;
+        for(a; a < parsMes.k; a++) {
+            free(parsMes.strings[a]);
         }
     }
 }

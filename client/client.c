@@ -49,7 +49,7 @@ void Pars(char* mes, struct Message* parsMes) {
             i++;
         }
         j = 0;
-        parsMes->strings[k] = malloc(parsMes->stringLength[k]);
+        parsMes->strings[k] = malloc(parsMes->stringLength[k] + 1);
         parsMes->strings[k][0] = 0;
         strncat(parsMes->strings[k], mes + i, parsMes->stringLength[k]);
         i += parsMes->stringLength[k];
@@ -158,6 +158,10 @@ void* serverProcess(void * data) {
             default:
                 printf("Unknown message\n");
                 break;
+        }
+        int a = 0;
+        for(a; a < parsMes.k; a++) {
+            free(parsMes.strings[a]);
         }
     } 
 }
@@ -360,5 +364,6 @@ int main(int argc, char* argv[])
     pthread_t t;
     pthread_create(&t, NULL, serverProcess, (void *)&sockid);
     clientProcess(sockid);
+    free(ip);
     return 0;
 }
