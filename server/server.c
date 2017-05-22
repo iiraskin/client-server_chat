@@ -147,7 +147,6 @@ void RMesMake(char* newMes, int sockid, char* text)
     notif.length = notif.stringLength[0] + notif.stringLength[1] + notif.stringLength[2] + 12;
     MakeMes(newMes, &notif);
     free(notif.strings[0]);
-    int b = 0;
     return;
 }
 
@@ -181,7 +180,7 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     if (parsMes->k != 2) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
-        MMesMake(newMes, "Error 6");
+        MMesMake(newMes, "Invalid message");
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
         free(newMes);
         return;
@@ -304,14 +303,13 @@ void RMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     if (parsMes->k != 1) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
-        MMesMake(newMes, "Error 6");
+        MMesMake(newMes, "Invalid message");
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
         return;
     }
     char* newMes;
     newMes = malloc(messBufMaxSize);
     RMesMake(newMes, sockid, parsMes->strings[0]);
-    int b = 0;
     pthread_mutex_lock(mut);
     int a = 0;
     for (a; a < usersLen; a++) {
@@ -332,19 +330,18 @@ void HMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     if (parsMes->k != 1) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
-        MMesMake(newMes, "Error 6");
+        MMesMake(newMes, "Invalid message");
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
         return;
     }
-    int count = atoi(parsMes->strings[0]) % bufSize;
-    int i = count;
+    int i = atoi(parsMes->strings[0]) % bufSize;
     pthread_mutex_lock(mut);
     for(i; i > 0; i--) {
-        if (hisBuffer[(bufPointer - i) % bufSize][0] == 0) {
-            break;
+        if (hisBuffer[((bufPointer - i) + bufSize) % bufSize][0] == 0) {
+            continue;
         }
-        send(sockid, hisBuffer[(bufPointer - i) % bufSize], 
-             sizeOfMes(hisBuffer[(bufPointer - i) % bufSize]) + 5, 0);
+        send(sockid, hisBuffer[((bufPointer - i) + bufSize) % bufSize], 
+             sizeOfMes(hisBuffer[((bufPointer - i) + bufSize) % bufSize]) + 5, 0);
     }
     pthread_mutex_unlock(mut);
     return;
@@ -354,7 +351,7 @@ void LMess(int sockid, struct Message *parsMes) {
     if (parsMes->k != 0) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
-        MMesMake(newMes, "Error 6");
+        MMesMake(newMes, "Invalid message");
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
         free(newMes);
         return;
@@ -376,14 +373,14 @@ void KMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     if (parsMes->k != 2) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
-        MMesMake(newMes, "Error 6");
+        MMesMake(newMes, "Invalid message");
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
         return;
     }
     if (Users[0].sockid != sockid) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
-        MMesMake(newMes, "Error 5");
+        MMesMake(newMes, "Access error");
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
         return;
     }
