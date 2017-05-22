@@ -104,8 +104,8 @@ void* serverProcess(void * data) {
     while (1) {
         char messBuf[messBufMaxSize];
         int mess = recv(sockid, messBuf, 5, 0);
-        if (mess == 0) {
-            printf("Server break work\n");
+        if (mess <= 0) {
+            printf("Server break work or you were kicked\n");
             close(sockid);
             exit(0);
             return NULL;
@@ -117,7 +117,7 @@ void* serverProcess(void * data) {
             case 'r':
                 if (parsMes.k != 3) {
                     printf("Error in regular message\n");
-                c   ontinue;
+                    continue;
                 }
                 PrintTime(parsMes.strings[0]);
                 printf("%s: %s\n", parsMes.strings[1], parsMes.strings[2]);
@@ -149,11 +149,11 @@ void* serverProcess(void * data) {
                 printf("--- %s is online ---\n", parsMes.strings[0]);
                 break;
             case 'k':
-                if (parsMes.k != 1) {
+                if (parsMes.k != 2) {
                     printf("Error in kick message\n");
                     continue;
                 }
-                printf("--- %s ---\n", parsMes.strings[0]);
+                printf("--- %s was kicked because '%s' ---\n", parsMes.strings[0], parsMes.strings[1]);
                 break;
             default:
                 printf("Unknown message\n");
@@ -174,11 +174,13 @@ void RMesSend(char* newMes) {
     struct Message notif;
     notif.type = 'r';
     notif.k = 1;
+    notif.strings[0] = malloc(messBufMaxSize);
     notif.strings[0][0] = 0;
     strcpy(notif.strings[0], text);
     notif.stringLength[0] = strlen(notif.strings[0]);
     notif.length = notif.stringLength[0] + 4;
     MakeMes(newMes, &notif);
+    free(notif.strings[0]);
 }
 
 void IMesSend(char* newMes) {

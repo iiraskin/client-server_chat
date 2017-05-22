@@ -147,6 +147,7 @@ void RMesMake(char* newMes, int sockid, char* text)
     notif.length = notif.stringLength[0] + notif.stringLength[1] + notif.stringLength[2] + 12;
     MakeMes(newMes, &notif);
     free(notif.strings[0]);
+    int b = 0;
     return;
 }
 
@@ -309,6 +310,7 @@ void RMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     char* newMes;
     newMes = malloc(messBufMaxSize);
     RMesMake(newMes, sockid, parsMes->strings[0]);
+    int b = 0;
     pthread_mutex_lock(mut);
     int a = 0;
     for (a; a < usersLen; a++) {
@@ -402,6 +404,7 @@ void KMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
             
             close(Users[i].sockid);
             Users[i] = Users[usersLen - 1];
+            usersLen--;
             pthread_mutex_unlock(mut);
             free(newMes);
             return;
