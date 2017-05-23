@@ -14,6 +14,7 @@
 #define maxSizeOfLogin 31
 #define maxSizeOfPassword 31
 #define messBufMaxSize 7000
+#define minSizeOfMess 2
 
 struct Message
 {
@@ -34,7 +35,8 @@ int sizeOfMes (char* mes)
     return res;
 }
 
-void Pars(char* mes, struct Message* parsMes) {
+void Pars(char* mes, struct Message* parsMes) 
+{
     parsMes->type = mes[0];
     int i = 1;
     int j = 0;
@@ -59,7 +61,8 @@ void Pars(char* mes, struct Message* parsMes) {
     return;
 }
 
-void MakeMes(char* mes, struct Message* parsMes) {
+void MakeMes(char* mes, struct Message* parsMes) 
+{
     mes[0] = parsMes->type;
     int Length = parsMes->length;
     int i = 4;
@@ -98,7 +101,8 @@ void PrintTime( char* timeMic )
     printf("[%d:%d:%d] ", timeStruct->tm_hour, (timeStruct->tm_min), timeStruct->tm_sec);
 }
 
-void* serverProcess(void * data) {
+void* serverProcess(void * data) 
+{
     int sockid = *(int*)data;
     
     while (1) {
@@ -166,12 +170,17 @@ void* serverProcess(void * data) {
     } 
 }
 
-void RMesSend(char* newMes) {
+void RMesSend(char* newMes, int sockid) 
+{
     int r;
     size_t len = 0;
     char* text = NULL;
     if ((r = getline(&text, &len, stdin)) == -1) {
         printf("Error. Can not read\n");
+        return;
+    }
+    if (r - 1 < minSizeOfMess) {
+        printf("Too short message\n");
         return;
     }
     text[r - 1] = 0;
@@ -185,14 +194,20 @@ void RMesSend(char* newMes) {
     notif.length = notif.stringLength[0] + 4;
     MakeMes(newMes, &notif);
     free(notif.strings[0]);
+    send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
 }
 
-void IMesSend(char* newMes) {
+void IMesSend(char* newMes, int sockid) 
+{
     int r;
     size_t len = 0;
     char* text = NULL;
     if ((r = getline(&text, &len, stdin)) == -1) {
         printf("Error. Can not read\n");
+        return;
+    }
+    if (r - 1 > maxSizeOfLogin) {
+        printf("Too long login\n");
         return;
     }
     text[r - 1] = 0;
@@ -207,6 +222,10 @@ void IMesSend(char* newMes) {
         printf("Error. Can not read\n");
         return;
     }
+    if (r - 1 > maxSizeOfLogin) {
+        printf("Too long password\n");
+        return;
+    }
     text[r - 1] = 0;
     notif.strings[1] = text;
     notif.stringLength[0] = strlen(notif.strings[0]);
@@ -214,23 +233,33 @@ void IMesSend(char* newMes) {
     notif.length = notif.stringLength[0] + notif.stringLength[1] + 8;
     MakeMes(newMes, &notif);
     free(s);
+    send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
 }
 
-void OMesSend(char* newMes) {
+void OMesSend(char* newMes, int sockid) {
     struct Message notif;
     notif.type = 'o';
     notif.k = 0;
     notif.length = 0;
     MakeMes(newMes, &notif);
+    send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
 }
 
-void HMesSend(char* newMes) {
+void HMesSend(char* newMes, int sockid) 
+{
     int r;
     size_t len = 0;
     char* text = NULL;
     if ((r = getline(&text, &len, stdin)) == -1) {
         printf("Error. Can not read\n");
         return;
+    }
+    int i = 0;
+    for (i; i < r - 1; i++) {
+        if (text[i] < '0' || text[i] > '9') {
+            printf("Incorrect size of history\n");
+            return;
+        }
     }
     text[r - 1] = 0;
     struct Message notif;
@@ -240,17 +269,21 @@ void HMesSend(char* newMes) {
     notif.stringLength[0] = strlen(notif.strings[0]);
     notif.length = notif.stringLength[0] + 4;
     MakeMes(newMes, &notif);
+    send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
 }
 
-void LMesSend(char* newMes) {
+void LMesSend(char* newMes, int sockid) 
+{
     struct Message notif;
     notif.type = 'l';
     notif.k = 0;
     notif.length = 0;
     MakeMes(newMes, &notif);
+    send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
 }
 
-void KMesSend(char* newMes) {
+void KMesSend(char* newMes, int sockid) 
+{
     int r;
     size_t len = 0;
     char* text = NULL;
@@ -277,6 +310,7 @@ void KMesSend(char* newMes) {
     notif.length = notif.stringLength[0] + notif.stringLength[1] + 8;
     MakeMes(newMes, &notif);
     free(s);
+    send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
 }
 
 void clientProcess(int sockid)
@@ -289,43 +323,37 @@ void clientProcess(int sockid)
         if (!strcmp(text, "--regular")) {
             char* newMes;
             newMes = malloc(messBufMaxSize);
-            RMesSend(newMes);
-            send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
+            RMesSend(newMes, sockid);
             free(newMes);
             continue;
         } if (!strcmp(text, "--login")) {
             char* newMes;
             newMes = malloc(messBufMaxSize);
-            IMesSend(newMes);
-            send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
+            IMesSend(newMes, sockid);
             free(newMes);
             continue;
         } if (!strcmp(text, "--logout")) {
             char* newMes;
             newMes = malloc(messBufMaxSize);
-            OMesSend(newMes);
-            send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
+            OMesSend(newMes, sockid);
             free(newMes);
             continue;
         } if (!strcmp(text, "--history")) {
             char* newMes;
             newMes = malloc(messBufMaxSize);
-            HMesSend(newMes);
-            send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
+            HMesSend(newMes, sockid);
             free(newMes);
             continue;
         } if (!strcmp(text, "--list")) {
             char* newMes;
             newMes = malloc(messBufMaxSize);
-            LMesSend(newMes);
-            send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
+            LMesSend(newMes, sockid);
             free(newMes);
             continue;
         } if (!strcmp(text, "--kick")) {
             char* newMes;
             newMes = malloc(messBufMaxSize);
-            KMesSend(newMes);
-            send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
+            KMesSend(newMes, sockid);
             free(newMes);
             continue;
         }
