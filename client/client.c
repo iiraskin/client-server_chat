@@ -109,7 +109,7 @@ void* serverProcess(void * data)
         char messBuf[messBufMaxSize];
         int mess = recv(sockid, messBuf, 5, 0);
         if (mess <= 0) {
-            printf("Server break work or you were kicked\n");
+            printf("Server break work\n");
             close(sockid);
             exit(0);
             return NULL;
@@ -153,11 +153,13 @@ void* serverProcess(void * data)
                 printf("--- %s is online ---\n", parsMes.strings[0]);
                 break;
             case 'k':
-                if (parsMes.k != 2) {
+                if (parsMes.k != 1) {
                     printf("Error in kick message\n");
                     continue;
                 }
-                printf("--- %s was kicked because '%s' ---\n", parsMes.strings[0], parsMes.strings[1]);
+                printf("--- You were kicked because '%s' ---\n", parsMes.strings[0]);
+                close(sockid);
+                exit(0);
                 break;
             default:
                 printf("Unknown message\n");
