@@ -31,9 +31,6 @@ struct User
 struct User Users[maxUsersNum];
 int usersLen;
 
-char* hisBuffer[bufSize];
-int bufPointer;
-
 struct UserProcDate
 {
     int sockid;
@@ -400,7 +397,7 @@ void OMess(int sockid, pthread_mutex_t* mut) {
     send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
 }
 
-void RMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
+void RMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut, int* bufPointer, char** hisBuffer) {
     if (parsMes->k != 1) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
@@ -422,18 +419,19 @@ void RMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
             }
         }
     }
-    hisBuffer[bufPointer][0] = 'h';
+    hisBuffer[*bufPointer][0] = 'h';
     a = 1;
     for (a; a < sizeOfMes(newMes) + 5; a++) {
-        hisBuffer[bufPointer][a] = newMes[a];
+        hisBuffer[*bufPointer][a] = newMes[a];
     }
-    bufPointer = (bufPointer + 1) % bufSize;
+    *bufPointer = ((*bufPointer) + 1) % bufSize;
     pthread_mutex_unlock(mut);
     free(newMes);
     return;
 }
 
-void HMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
+void HMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut, 
+           int bufPointer, char** hisBuffer) {
     if (parsMes->k != 1) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
@@ -565,6 +563,15 @@ void* userProcess(void * data) {
     int sockid = newUserProcDate.sockid;
     pthread_mutex_t* mut = newUserProcDate.mut;
     int nextId = 1;
+    char* hisBuffer[bufSize];
+    int bufPointer;
+    bufPointer = 0;
+    
+    int a = 0;
+    for (a; a < bufSize; a++) {
+        hisBuffer[a] = malloc(messBufMaxSize);
+        hisBuffer[a][0] = 0;
+    }
 
     while (1) {
         char messBuf[messBufMaxSize];
@@ -605,13 +612,13 @@ void* userProcess(void * data) {
             }
             switch (parsMes.type) {
                 case 'r':
-                    RMess(sockid, &parsMes, mut);
+                    RMess(sockid, &parsMes, mut, &bufPointer, hisBuffer);
                     break;
                 case 'o':
                     OMess(sockid, mut);
                     break;
                 case 'h':
-                    HMess(sockid, &parsMes, mut);
+                    HMess(sockid, &parsMes, mut, bufPointer, hisBuffer);
                     break;
                 case 'l':
                     LMess(sockid, &parsMes);
@@ -639,13 +646,6 @@ void* userProcess(void * data) {
 int main(int argc, char* argv[])
 {
     usersLen = 1;
-    bufPointer = 0;
-    
-    int a = 0;
-    for (a; a < bufSize; a++) {
-        hisBuffer[a] = malloc(messBufMaxSize);
-        hisBuffer[a][0] = 0;
-    }
     
     char option;
     
