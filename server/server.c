@@ -18,6 +18,7 @@
 #define messBufMaxSize 7000
 #define maxOneLoginNum 5
 
+
 struct User
 {
    char* login;
@@ -58,7 +59,9 @@ int sizeOfMes (char* mes)
     return res;
 }
 
-void Pars(char* mes, struct Message* parsMes) {
+void Pars(char* mes, struct Message* parsMes)
+{
+    int a = 0;
     parsMes->type = mes[0];
     int i = 1;
     int j = 0;
@@ -75,8 +78,11 @@ void Pars(char* mes, struct Message* parsMes) {
         j = 0;
         parsMes->strings[k] = malloc(parsMes->stringLength[k] + 1);
         parsMes->strings[k][0] = 0;
-        strncat(parsMes->strings[k], mes + i, parsMes->stringLength[k]);
-        i += parsMes->stringLength[k];
+        for (j; j <  parsMes->stringLength[k]; j++) {
+            parsMes->strings[k][j] = mes[i];
+            i++;
+        }
+        parsMes->strings[k][j] = 0;
         k++;
     }
     parsMes->k = k;
@@ -100,10 +106,12 @@ void MakeMes(char* mes, struct Message* parsMes) {
             mes[i] = (char)(Length % 256);
             Length /= 256;
         }
-        mes[j + 4] = 0;
-        char* mes1 = mes + j + 4;
-        mes1 = strcat(mes1, parsMes->strings[k]);
-        j += 4 + parsMes->stringLength[k];
+        j += 4;
+        int a = 0;
+        for (a; a < parsMes->stringLength[k]; a++) {
+            mes[j] = parsMes->strings[k][a];
+            j++;
+        }
     }
     return;
 }
@@ -129,9 +137,28 @@ void MMesMake(char* newMes, char* text)
         t2 /= 256;
     };
     notif.strings[1] = text;
-    notif.stringLength[0] = strlen(notif.strings[0]);
+    notif.stringLength[0] = 8;
     notif.stringLength[1] = strlen(notif.strings[1]);
     notif.length = notif.stringLength[0] + notif.stringLength[1] + 8;
+    MakeMes(newMes, &notif);
+    free(notif.strings[0]);
+    return;
+}
+
+void SMesMake(char* newMes, int text)
+{
+    struct Message notif;
+    notif.type = 's';
+    notif.k = 1;
+    notif.strings[0] = malloc(messBufMaxSize);
+    notif.strings[0][0] = 0;
+    int a = 3;
+    for (a; a >= 0; a--) {
+        notif.strings[0][a] = (char)(text % 256);
+        text /= 256;
+    }
+    notif.stringLength[0] = 4;
+    notif.length = notif.stringLength[0] + 4;
     MakeMes(newMes, &notif);
     free(notif.strings[0]);
     return;
@@ -168,7 +195,7 @@ void RMesMake(char* newMes, int sockid, char* text)
         }
     }
     notif.strings[2] = text;
-    notif.stringLength[0] = strlen(notif.strings[0]);
+    notif.stringLength[0] = 8;
     notif.stringLength[1] = strlen(notif.strings[1]);
     notif.stringLength[2] = strlen(notif.strings[2]);
     notif.length = notif.stringLength[0] + notif.stringLength[1] + notif.stringLength[2] + 12;
@@ -182,6 +209,7 @@ void LMesMake(char* newMes, char* text) {
     notif.type = 'l';
     notif.k = 1;
     notif.strings[0] = malloc(messBufMaxSize);
+    notif.strings[0][0] = 0;
     strcpy(notif.strings[0], text);
     notif.stringLength[0] = strlen(notif.strings[0]);
     notif.length = notif.stringLength[0] + 4;
@@ -205,7 +233,7 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     if (parsMes->k != 2) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
-        MMesMake(newMes, "Invalid message");
+        SMesMake(newMes, 6);
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
         free(newMes);
         return;
@@ -224,6 +252,8 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
             if (sockid == Users[i].sockid[j] && Users[i].isOnline == 1) {
                 char* newMes;
                 newMes = malloc(messBufMaxSize);
+                SMesMake(newMes, 3);
+                send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
                 MMesMake(newMes, "You already logined");
                 send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
                 free(newMes);
@@ -242,6 +272,8 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
                     Users[i].sockid = (int*)malloc(maxOneLoginNum * sizeof(int));
                     Users[i].sockid[0] = sockid;
                     Users[i].sockidLen = 1;
+                    SMesMake(newMes, 0);
+                    send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
                     MMesMake(newMes, strcat(newLogin, " came"));
                     int a = 0, b = 0;
                     for (a; a < usersLen; a++) { 
@@ -258,6 +290,8 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
                     pthread_mutex_lock(mut);
                     Users[i].sockid[Users[i].sockidLen] = sockid;
                     Users[i].sockidLen++;
+                    SMesMake(newMes, 0);
+                    send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
                     MMesMake(newMes, "You logined another time");
                     send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
                     pthread_mutex_unlock(mut);
@@ -270,6 +304,8 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
 
             char* newMes;
             newMes = malloc(messBufMaxSize);
+            SMesMake(newMes, 4);
+            send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
             MMesMake(newMes, strcat(newLogin, " has already used"));
             send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
             free(newMes);
@@ -294,6 +330,8 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
 
     char* newMes;
     newMes = malloc(messBufMaxSize);
+    SMesMake(newMes, 0);
+    send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
     MMesMake(newMes, strcat(newLogin, " joined"));
     pthread_mutex_lock(mut);
     int a = 0, b = 0;
@@ -318,17 +356,19 @@ void OMess(int sockid, pthread_mutex_t* mut) {
         j = 0;
         for (j; j < Users[i].sockidLen; j++) {
             if (Users[i].sockid[j] == sockid) {
+                char* newMes;
+                newMes = malloc(messBufMaxSize);
+                SMesMake(newMes, 0);
+                send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
+                pthread_mutex_lock(mut);
                 Users[i].sockid[Users[i].sockidLen - 1] = Users[i].sockid[j];
                 Users[i].sockidLen--;
                 if (Users[i].sockidLen == 0) {
                     Users[i].isOnline = 0;
-                    free(Users[i].sockid);
-                    char* newMes;
-                    newMes = malloc(messBufMaxSize);
+                    free(Users[i].sockid);;
                     char* loginCopy = malloc(maxSizeOfLogin);
                     strcpy(loginCopy, Users[i].login);
                     MMesMake(newMes, strcat(loginCopy, " logout"));
-                    pthread_mutex_lock(mut);
                     int a = 0, b = 0;
                     for (a; a < usersLen; a++) { 
                         if (Users[a].isOnline == 1) {
@@ -339,20 +379,24 @@ void OMess(int sockid, pthread_mutex_t* mut) {
                         }
                     }
                     free(loginCopy);
-                    free(newMes);
                 }
+                free(newMes);
                 pthread_mutex_unlock(mut);
                 return;
             }
         }
     }
+    char* newMes;
+    newMes = malloc(messBufMaxSize);
+    SMesMake(newMes, 3);
+    send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
 }
 
 void RMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     if (parsMes->k != 1) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
-        MMesMake(newMes, "Invalid message");
+        SMesMake(newMes, 6);
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
         free(newMes);
         return;
@@ -385,12 +429,17 @@ void HMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     if (parsMes->k != 1) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
-        MMesMake(newMes, "Invalid message");
+        SMesMake(newMes, 6);
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
         free(newMes);
         return;
     }
-    int i = atoi(parsMes->strings[0]) % bufSize;
+    int i = 0;
+    int j = 0;
+    time_t timeInt = 0;
+    for (j; j < 4; j++) {
+        i = i * 256 + (parsMes->strings[0][j] + 256) % 256;
+    }
     pthread_mutex_lock(mut);
     for(i; i > 0; i--) {
         if (hisBuffer[((bufPointer - i) + bufSize) % bufSize][0] == 0) {
@@ -407,7 +456,7 @@ void LMess(int sockid, struct Message *parsMes) {
     if (parsMes->k != 0) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
-        MMesMake(newMes, "Invalid message");
+        SMesMake(newMes, 6);
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
         free(newMes);
         return;
@@ -429,7 +478,7 @@ void KMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     if (parsMes->k != 2) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
-        MMesMake(newMes, "Invalid message");
+        SMesMake(newMes, 6);
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
         free(newMes);
         return;
@@ -444,7 +493,7 @@ void KMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     if (a != -1) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
-        MMesMake(newMes, "Access error");
+        SMesMake(newMes, 5);
         send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
         free(newMes);
         return;
@@ -472,6 +521,8 @@ void KMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
             b = 0;
             char* newMes = malloc(messBufMaxSize);
             char* text = malloc(messBufMaxSize);
+            SMesMake(newMes, 0);
+            send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
             text[0] = 0;
             sprintf(text, "%s was kicked because '%s'", parsMes->strings[0], parsMes->strings[1]);
             MMesMake(newMes, text);
@@ -490,6 +541,8 @@ void KMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     }
     char* newMes;
     newMes = malloc(messBufMaxSize);
+    SMesMake(newMes, 2);
+    send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
     MMesMake(newMes, strcat(parsMes->strings[0], " - no such user"));
     send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
     free(newMes);
@@ -532,9 +585,8 @@ void* userProcess(void * data) {
                 }
             }
             if (a != -1) {
-                char* newMes = NULL;
-                newMes = malloc(messBufMaxSize);
-                MMesMake(newMes, "Login, please");
+                char* newMes = malloc(messBufMaxSize);
+                SMesMake(newMes, 2);
                 send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
                 free(newMes);
                 continue;
@@ -559,7 +611,13 @@ void* userProcess(void * data) {
                     KMess(sockid, &parsMes, mut);
                     break;
                 default:
-                        break;
+                {
+                    char* newMes = malloc(messBufMaxSize);
+                    SMesMake(newMes, 1);
+                    send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
+                    free(newMes);
+                    break;
+                }
             }
         }
         int a = 0;

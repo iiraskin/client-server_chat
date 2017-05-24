@@ -35,8 +35,10 @@ int sizeOfMes (char* mes)
     return res;
 }
 
-void Pars(char* mes, struct Message* parsMes) 
+void Pars(char* mes, struct Message* parsMes)
 {
+    int c = 0;
+    int a = 0;
     parsMes->type = mes[0];
     int i = 1;
     int j = 0;
@@ -53,16 +55,18 @@ void Pars(char* mes, struct Message* parsMes)
         j = 0;
         parsMes->strings[k] = malloc(parsMes->stringLength[k] + 1);
         parsMes->strings[k][0] = 0;
-        strncat(parsMes->strings[k], mes + i, parsMes->stringLength[k]);
-        i += parsMes->stringLength[k];
+        for (j; j <  parsMes->stringLength[k]; j++) {
+            parsMes->strings[k][j] = mes[i];
+            i++;
+        }
+        parsMes->strings[k][j] = 0;
         k++;
     }
     parsMes->k = k;
     return;
 }
 
-void MakeMes(char* mes, struct Message* parsMes) 
-{
+void MakeMes(char* mes, struct Message* parsMes) {
     mes[0] = parsMes->type;
     int Length = parsMes->length;
     int i = 4;
@@ -79,10 +83,12 @@ void MakeMes(char* mes, struct Message* parsMes)
             mes[i] = (char)(Length % 256);
             Length /= 256;
         }
-        mes[j + 4] = 0;
-        char* mes1 = mes + j + 4;
-        mes1 = strcat(mes1, parsMes->strings[k]);
-        j += 4 + parsMes->stringLength[k];
+        j += 4;
+        int a = 0;
+        for (a; a < parsMes->stringLength[k]; a++) {
+            mes[j] = parsMes->strings[k][a];
+            j++;
+        }
     }
     return;
 }
@@ -158,6 +164,40 @@ void* serverProcess(void * data)
                 close(sockid);
                 exit(0);
                 break;
+            case 's':
+            {
+                int res = 0, i = 0;
+                for (i; i < 4; i++) {
+                    res = res * 256 + (parsMes.strings[0][i] + 256) % 256;
+                }
+                switch (res) {
+                    case 0:
+                       printf("Server: OK\n");
+                       break; 
+                    case 1:
+                        printf("Server: Unknown message\n");
+                        break;
+                    case 2:
+                        printf("Server: Unauthorized user\n");
+                        break;
+                    case 3:
+                        printf("Server: Authentication error\n");
+                        break;
+                    case 4:
+                        printf("Server:  Registration error\n");
+                        break;
+                    case 5:
+                        printf("Server: Access error\n");
+                        break;
+                    case 6:
+                        printf("Server: Invalid message\n");
+                        break;
+                    default:
+                        printf("Server: Unknown S-message\n");
+                        break;
+                }
+                break;
+            }
             default:
                 printf("Unknown message\n");
                 break;
@@ -261,11 +301,16 @@ void HMesSend(char* newMes, int sockid)
         }
     }
     text[r - 1] = 0;
+    int num = atoi(text);
     struct Message notif;
     notif.type = 'h';
     notif.k = 1;
-    notif.strings[0] = text;
-    notif.stringLength[0] = strlen(notif.strings[0]);
+    int a = 3;
+    for (a; a >= 0; a--) {
+        notif.strings[0][a] = (char)(num % 256);
+        num /= 256;
+    }
+    notif.stringLength[0] = 4;
     notif.length = notif.stringLength[0] + 4;
     MakeMes(newMes, &notif);
     send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
