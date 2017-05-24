@@ -149,11 +149,11 @@ void* serverProcess(void * data)
                 return NULL;
                 break;
             case 'l':
-                if (parsMes.k != 1) {
+                if (parsMes.k != 2) {
                     printf("Error in list message\n");
                     continue;
                 }
-                printf("--- %s is online ---\n", parsMes.strings[0]);
+                printf("--- %s %s is online ---\n", parsMes.strings[0], parsMes.strings[1]);
                 break;
             case 'k':
                 if (parsMes.k != 1) {
