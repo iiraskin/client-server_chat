@@ -89,14 +89,11 @@ void MakeMes(char* mes, struct Message* parsMes)
 
 void PrintTime( char* timeMic )
 {
-    char time[20];
     int i = 0;
-    while (timeMic[i] != '$') {
-        time[i] = timeMic[i];
-        i++;
+    time_t timeInt = 0;
+    for (i; i < 4; i++) {
+        timeInt = timeInt * 256 + (timeMic[i] + 256) % 256;
     }
-    time[i] = 0;
-    time_t timeInt = atol(time);
     struct tm* timeStruct = localtime(&timeInt);
     printf("[%d:%d:%d] ", timeStruct->tm_hour, (timeStruct->tm_min), timeStruct->tm_sec);
 }
