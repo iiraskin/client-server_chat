@@ -116,7 +116,18 @@ void MMesMake(char* newMes, char* text)
     struct timeval tv;
     gettimeofday(&tv, NULL);    
     notif.strings[0] = malloc(18);
-    sprintf(notif.strings[0],"%ld$%ld", (size_t)tv.tv_sec, (size_t)tv.tv_usec);
+    long t1 = (size_t)tv.tv_sec;
+    long t2 = (size_t)tv.tv_usec;
+    int a = 3;
+    for (a; a >= 0; a--) {
+        notif.strings[0][a] = (char)(t1 % 256);
+        t1 /= 256;
+    }
+    a = 7;
+    for (a; a >= 3; a--) {
+        notif.strings[0][a] = (char)(t2 % 256);
+        t2 /= 256;
+    };
     notif.strings[1] = text;
     notif.stringLength[0] = strlen(notif.strings[0]);
     notif.stringLength[1] = strlen(notif.strings[1]);
