@@ -271,8 +271,6 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut, int* nextI
     for (i; i < usersLen; i++) {
         if (strcmp(newLogin, Users[i].login) == 0) {
             if (strcmp(newPassword, Users[i].password) == 0) {
-            printf("222\n");
-            fflush(stdin);
                 char* newMes;
                 newMes = malloc(messBufMaxSize);
                 if (Users[i].isOnline == 0) {
@@ -309,9 +307,6 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut, int* nextI
                 free(newPassword);
                 return;
             }
-            printf("333\n");
-            fflush(stdin);
-
             char* newMes;
             newMes = malloc(messBufMaxSize);
             SMesMake(newMes, 4);
