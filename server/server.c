@@ -29,8 +29,13 @@ struct User
    int sockidLen;
 };
 
+char* hisBuffer[bufSize];
+int bufPointer;
+
 struct User Users[maxUsersNum];
 int usersLen;
+
+int nextId;
 
 struct UserProcDate
 {
@@ -231,7 +236,7 @@ void KMesMake(char* newMes, char* text) {
     return;
 }
 
-void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut, int* nextId) {
+void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     if (parsMes->k != 2) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
@@ -331,7 +336,7 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut, int* nextI
     newUser.sockidLen = 1;
     newUser.id = malloc(10);
     newUser.id[0] = 0;
-    sprintf(newUser.id, "id%d", *nextId);
+    sprintf(newUser.id, "id%d", nextId);
     nextId++;
     Users[usersLen] = newUser;
     usersLen++;
@@ -399,7 +404,7 @@ void OMess(int sockid, pthread_mutex_t* mut) {
     send(sockid, newMes, sizeOfMes(newMes) + 5, 0);
 }
 
-void RMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut, int* bufPointer, char** hisBuffer) {
+void RMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     if (parsMes->k != 1) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
@@ -421,19 +426,18 @@ void RMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut, int* bufPo
             }
         }
     }
-    hisBuffer[*bufPointer][0] = 'h';
+    hisBuffer[bufPointer][0] = 'h';
     a = 1;
     for (a; a < sizeOfMes(newMes) + 5; a++) {
-        hisBuffer[*bufPointer][a] = newMes[a];
+        hisBuffer[bufPointer][a] = newMes[a];
     }
-    *bufPointer = ((*bufPointer) + 1) % bufSize;
+    bufPointer = ((bufPointer) + 1) % bufSize;
     pthread_mutex_unlock(mut);
     free(newMes);
     return;
 }
 
-void HMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut, 
-           int bufPointer, char** hisBuffer) {
+void HMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
     if (parsMes->k != 1) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
@@ -444,9 +448,11 @@ void HMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut,
     }
     int i = 0;
     int j = 0;
-    time_t timeInt = 0;
     for (j; j < 4; j++) {
         i = i * 256 + (parsMes->strings[0][j] + 256) % 256;
+    }
+    if (i > bufSize) {
+        i = bufSize;
     }
     pthread_mutex_lock(mut);
     for(i; i > 0; i--) {
@@ -498,7 +504,7 @@ void KMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
             break;
         }
     }
-    if (a != -1) {
+    if (a != -1 || strcmp(parsMes->strings[0], "id0")) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
         SMesMake(newMes, 5);
@@ -564,10 +570,6 @@ void* userProcess(void * data) {
     struct UserProcDate newUserProcDate = *((struct UserProcDate*)data);
     int sockid = newUserProcDate.sockid;
     pthread_mutex_t* mut = newUserProcDate.mut;
-    int nextId = 1;
-    char* hisBuffer[bufSize];
-    int bufPointer;
-    bufPointer = 0;
     
     int a = 0;
     for (a; a < bufSize; a++) {
@@ -590,7 +592,7 @@ void* userProcess(void * data) {
         struct Message parsMes;
         Pars(messBuf, &parsMes);
         if (parsMes.type == 'i') {;
-            IMess(sockid, &parsMes, mut, &nextId);
+            IMess(sockid, &parsMes, mut);
         } else {
             int a = 0, b = 0;
             for (a; a < usersLen; a++) {
@@ -614,13 +616,13 @@ void* userProcess(void * data) {
             }
             switch (parsMes.type) {
                 case 'r':
-                    RMess(sockid, &parsMes, mut, &bufPointer, hisBuffer);
+                    RMess(sockid, &parsMes, mut);
                     break;
                 case 'o':
                     OMess(sockid, mut);
                     break;
                 case 'h':
-                    HMess(sockid, &parsMes, mut, bufPointer, hisBuffer);
+                    HMess(sockid, &parsMes, mut);
                     break;
                 case 'l':
                     LMess(sockid, &parsMes);
@@ -648,6 +650,8 @@ void* userProcess(void * data) {
 int main(int argc, char* argv[])
 {
     usersLen = 1;
+    nextId = 1;
+    bufPointer = 0;
     
     char option;
     
