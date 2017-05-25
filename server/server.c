@@ -504,7 +504,7 @@ void KMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut) {
             break;
         }
     }
-    if (a != -1 || strcmp(parsMes->strings[0], "id0")) {
+    if (a != -1 || !strcmp(parsMes->strings[0], "id0")) {
         char* newMes;
         newMes = malloc(messBufMaxSize);
         SMesMake(newMes, 5);
