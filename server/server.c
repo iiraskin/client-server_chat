@@ -18,6 +18,7 @@
 #define messBufMaxSize 7000
 #define maxOneLoginNum 5
 
+
 struct User
 {
    char* id;
@@ -265,6 +266,8 @@ void IMess(int sockid, struct Message *parsMes, pthread_mutex_t* mut, int* nextI
             }
         }
     }
+    i = 0;
+    printf("%d\n", usersLen);
     for (i; i < usersLen; i++) {
         if (strcmp(newLogin, Users[i].login) == 0) {
             if (strcmp(newPassword, Users[i].password) == 0) {
